@@ -8,6 +8,7 @@ use App\Models\Office;
 use App\Models\Reservation;
 use App\Notifications\NewHostReservation;
 use App\Notifications\NewUserReservation;
+use App\Services\OfficeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -26,18 +27,10 @@ class UserReservationController extends Controller
     {
     }
 
-    public function store(StoreReservationRequest $request): ReservationResource
+    public function store(StoreReservationRequest $request, OfficeService $officeService): ReservationResource
     {
         $data = $request->validated();
-        $office = Office::findOrFail($data['office_id']);
-
-        if ($office->user_id === auth()->id()) {
-            throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on your own office']);
-        }
-
-        if ($office->hidden || $office->approval_status !== 'approved') {
-            throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on a hidden or unapproved office']);
-        }
+        $office = $officeService->getOfficeDataForReservation($data['office_id'], auth()->id());
 
         $reservation = Cache::lock('reservations_office_' . $office->id, 10)->block(3, function () use ($data, $office) {
             $numberOfDays = round(Carbon::parse($data['end_date'])->endOfDay()->diffInDays(Carbon::parse($data['start_date'])->startOfDay()) + 1) * -1;
