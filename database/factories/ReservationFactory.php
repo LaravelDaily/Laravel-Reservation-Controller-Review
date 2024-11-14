@@ -30,7 +30,7 @@ class ReservationFactory extends Factory
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),
             'status' => 'active',
-            'price' => fn(array $attributes) => Office::find($attributes['office_id'])->price_per_day * $startDate->diffInDays($endDate),
+            'price' => fn (array $attributes) => Office::find($attributes['office_id'])->price_per_day * $startDate->diffInDays($endDate),
             'wifi_password' => Str::random(10),
         ];
     }
