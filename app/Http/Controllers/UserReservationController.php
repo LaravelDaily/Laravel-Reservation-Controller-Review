@@ -9,11 +9,13 @@ use Illuminate\Http\Request;
 
 class UserReservationController extends Controller
 {
-    public function index() {
+    public function index()
+    {
 
     }
 
-    public function create() {
+    public function create()
+    {
 
     }
 
@@ -34,19 +36,23 @@ class UserReservationController extends Controller
         );
     }
 
-    public function show($id) {
+    public function show($id)
+    {
 
     }
 
-    public function edit($id) {
+    public function edit($id)
+    {
 
     }
 
-    public function update(Request $request, $id) {
+    public function update(Request $request, $id)
+    {
 
     }
 
-    public function destroy($id) {
+    public function destroy($id)
+    {
 
     }
 }
