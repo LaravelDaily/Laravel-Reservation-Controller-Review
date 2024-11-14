@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class ReservationService
 {
-    public ?Office $office = null;
+    public Office $office;
 
     public function setOffice(int $officeID): void
     {
