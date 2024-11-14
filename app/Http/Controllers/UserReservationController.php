@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreReservationRequest;
 use App\Http\Resources\ReservationResource;
 use App\Models\Office;
 use App\Models\Reservation;
@@ -25,16 +26,9 @@ class UserReservationController extends Controller
     {
     }
 
-    public function store(Request $request): ReservationResource
+    public function store(StoreReservationRequest $request): ReservationResource
     {
-        abort_unless(auth()->user()->tokenCan('reservations.make'), 403);
-
-        $data = $request->validate([
-            'office_id' => ['required', 'integer', 'exists:offices,id'],
-            'start_date' => ['required', 'date', 'after:today'],
-            'end_date' => ['required', 'date', 'after:start_date'],
-        ]);
-
+        $data = $request->validated();
         $office = Office::findOrFail($data['office_id']);
 
         if ($office->user_id === auth()->id()) {
