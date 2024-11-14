@@ -21,7 +21,7 @@ class Reservation extends Model
         'end_date',
         'status',
         'price',
-        'wifi_password',
+        'wifi_password'
     ];
 
     public function user(): BelongsTo

@@ -16,7 +16,7 @@ class Office extends Model
         'hidden',
         'approval_status',
         'price_per_day',
-        'monthly_discount',
+        'monthly_discount'
     ];
 
     public function user(): BelongsTo

@@ -28,6 +28,6 @@ class NewHostReservation extends Notification
         return (new MailMessage)
             ->subject('New Reservation for Your Office')
             ->line('A new reservation has been made for your office.')
-            ->action('View Reservation', url('/reservations/'.$this->reservation->id));
+            ->action('View Reservation', url('/reservations/' . $this->reservation->id));
     }
 }

@@ -28,6 +28,6 @@ class NewUserReservation extends Notification
         return (new MailMessage)
             ->subject('Reservation Confirmation')
             ->line('Your reservation has been successfully created.')
-            ->action('View Reservation', url('/reservations/'.$this->reservation->id));
+            ->action('View Reservation', url('/reservations/' . $this->reservation->id));
     }
 }
