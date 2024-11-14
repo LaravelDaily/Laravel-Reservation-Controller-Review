@@ -13,10 +13,13 @@ class ReservationService
 {
     public ?Office $office = null;
 
-    public function checkIfOfficeIsAvailable(int $officeID, string $startDate, string $endDate): void
+    public function setOffice(int $officeID): void
     {
         $this->office = Office::findOrFail($officeID);
+    }
 
+    public function checkIfOfficeIsAvailable(string $startDate, string $endDate): void
+    {
         if ($this->office->user_id === auth()->id()) {
             throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on your own office']);
         }

@@ -17,8 +17,9 @@ class UserReservationController extends Controller
     {
         $data = $request->validated();
 
+        $service->setOffice($data['office_id']);
+
         $service->checkIfOfficeIsAvailable(
-            $data['office_id'],
             $data['start_date'],
             $data['end_date']
         );
