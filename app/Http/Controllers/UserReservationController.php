@@ -18,6 +18,15 @@ class UserReservationController extends Controller
     {
     }
 
+    public function index()
+    {
+
+    }
+
+    public function create()
+    {
+    }
+
     public function store(StoreReservationRequest $request): ReservationResource
     {
         $this->authorize('make-reservation');
@@ -28,5 +37,21 @@ class UserReservationController extends Controller
         );
 
         return new ReservationResource($reservation->load('office'));
+    }
+
+    public function show($id)
+    {
+    }
+
+    public function edit($id)
+    {
+    }
+
+    public function update(Request $request, $id)
+    {
+    }
+
+    public function destroy($id)
+    {
     }
 }
