@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+
 use App\Http\Resources\ReservationResource;
 use App\Models\Office;
 use App\Models\Reservation;
@@ -16,26 +17,38 @@ use Illuminate\Validation\ValidationException;
 
 class UserReservationController extends Controller
 {
-    public function index()
-    {
-
-    }
-
-    public function create()
-    {
-    }
-
     public function store(Request $request): ReservationResource
     {
-        abort_unless(auth()->user()->tokenCan('reservations.make'), 403);
+        $this->authorizeReservation();
 
-        $data = $request->validate([
+        $data = $this->validateReservation($request);
+
+        $office = $this->validateOffice($data['office_id']);
+
+        $reservation = $this->createReservation($data, $office);
+
+        $this->notifyUsers($reservation, $office);
+
+        return new ReservationResource($reservation->load('office'));
+    }
+
+    protected function authorizeReservation()
+    {
+        abort_unless(auth()->user()->tokenCan('reservations.make'), 403);
+    }
+
+    protected function validateReservation(Request $request): array
+    {
+        return $request->validate([
             'office_id' => ['required', 'integer', 'exists:offices,id'],
             'start_date' => ['required', 'date', 'after:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
         ]);
+    }
 
-        $office = Office::findOrFail($data['office_id']);
+    protected function validateOffice(int $officeId): Office
+    {
+        $office = Office::findOrFail($officeId);
 
         if ($office->user_id === auth()->id()) {
             throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on your own office']);
@@ -45,18 +58,14 @@ class UserReservationController extends Controller
             throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on a hidden or unapproved office']);
         }
 
-        $reservation = Cache::lock('reservations_office_' . $office->id, 10)->block(3, function () use ($data, $office) {
-            $numberOfDays = round(Carbon::parse($data['end_date'])->endOfDay()->diffInDays(Carbon::parse($data['start_date'])->startOfDay()) + 1) * -1;
+        return $office;
+    }
 
-            if ($office->reservations()->activeBetween($data['start_date'], $data['end_date'])->exists()) {
-                throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation during this time']);
-            }
-
-            $price = $numberOfDays * $office->price_per_day;
-
-            if ($numberOfDays >= 28 && $office->monthly_discount) {
-                $price = $price * ((100 - $office->monthly_discount) / 100);
-            }
+    protected function createReservation(array $data, Office $office): Reservation
+    {
+        return Cache::lock('reservations_office_' . $office->id, 10)->block(3, function () use ($data, $office) {
+            $this->checkReservationAvailability($office, $data['start_date'], $data['end_date']);
+            $price = $this->calculateReservationPrice($office, $data['start_date'], $data['end_date']);
 
             return Reservation::create([
                 'user_id' => auth()->id(),
@@ -68,26 +77,31 @@ class UserReservationController extends Controller
                 'wifi_password' => Str::random(),
             ]);
         });
+    }
 
+    protected function checkReservationAvailability(Office $office, string $startDate, string $endDate): void
+    {
+        if ($office->reservations()->activeBetween($startDate, $endDate)->exists()) {
+            throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation during this time']);
+        }
+    }
+
+    protected function calculateReservationPrice(Office $office, string $startDate, string $endDate): float
+    {
+        $numberOfDays = (Carbon::parse($endDate)->endOfDay()->diffInDays(Carbon::parse($startDate)->startOfDay()) + 1) * -1;
+        $price = $numberOfDays * $office->price_per_day;
+
+
+        if ($numberOfDays >= 28 && $office->monthly_discount) {
+            $price *= (100 - $office->monthly_discount) / 100;
+        }
+
+        return round($price, 2);
+    }
+
+    protected function notifyUsers(Reservation $reservation, Office $office): void
+    {
         Notification::send(auth()->user(), new NewUserReservation($reservation));
         Notification::send($office->user, new NewHostReservation($reservation));
-
-        return new ReservationResource($reservation->load('office'));
-    }
-
-    public function show($id)
-    {
-    }
-
-    public function edit($id)
-    {
-    }
-
-    public function update(Request $request, $id)
-    {
-    }
-
-    public function destroy($id)
-    {
     }
 }
