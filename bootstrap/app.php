@@ -1,5 +1,6 @@
 <?php
 
+use App\Providers\AuthServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureFrontendRequestsAreStateful::class,
         ]);
     })
+    // Claude forgot to add the AuthServiceProvider
+    ->withProviders([
+        AuthServiceProvider::class
+    ])
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
