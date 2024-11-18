@@ -18,7 +18,6 @@ class UserReservationController extends Controller
 {
     public function index()
     {
-
     }
 
     public function create()
@@ -29,14 +28,30 @@ class UserReservationController extends Controller
     {
         abort_unless(auth()->user()->tokenCan('reservations.make'), 403);
 
-        $data = $request->validate([
+        $data = $this->validateRequest($request);
+
+        $office = Office::findOrFail($data['office_id']);
+
+        $this->checkOffice($office);
+
+        $reservation = $this->createReservation($data, $office);
+
+        $this->sendNotifications($reservation, $office);
+
+        return new ReservationResource($reservation->load('office'));
+    }
+
+    protected function validateRequest(Request $request): array
+    {
+        return $request->validate([
             'office_id' => ['required', 'integer', 'exists:offices,id'],
             'start_date' => ['required', 'date', 'after:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
         ]);
+    }
 
-        $office = Office::findOrFail($data['office_id']);
-
+    protected function checkOffice(Office $office): void
+    {
         if ($office->user_id === auth()->id()) {
             throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on your own office']);
         }
@@ -44,8 +59,11 @@ class UserReservationController extends Controller
         if ($office->hidden || $office->approval_status !== 'approved') {
             throw ValidationException::withMessages(['office_id' => 'You cannot make a reservation on a hidden or unapproved office']);
         }
+    }
 
-        $reservation = Cache::lock('reservations_office_' . $office->id, 10)->block(3, function () use ($data, $office) {
+    protected function createReservation(array $data, Office $office): Reservation
+    {
+        return Cache::lock('reservations_office_' . $office->id, 10)->block(3, function () use ($data, $office) {
             $numberOfDays = round(Carbon::parse($data['end_date'])->endOfDay()->diffInDays(Carbon::parse($data['start_date'])->startOfDay()) + 1) * -1;
 
             if ($office->reservations()->activeBetween($data['start_date'], $data['end_date'])->exists()) {
@@ -68,11 +86,12 @@ class UserReservationController extends Controller
                 'wifi_password' => Str::random(),
             ]);
         });
+    }
 
+    protected function sendNotifications(Reservation $reservation, Office $office): void
+    {
         Notification::send(auth()->user(), new NewUserReservation($reservation));
         Notification::send($office->user, new NewHostReservation($reservation));
-
-        return new ReservationResource($reservation->load('office'));
     }
 
     public function show($id)
